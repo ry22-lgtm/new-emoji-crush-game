@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Candy Crush with Emojis</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f0f0f0;
+            margin: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        #start-menu {
+            text-align: center;
+        }
+
+        #start-button {
+            padding: 10px 20px;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        #game-container {
+            text-align: center;
+        }
+
+        #game-table {
+            margin-top: 20px;
+            border-collapse: collapse;
+        }
+
+        #game-table td {
+            width: 60px;
+            height: 60px;
+            text-align: center;
+            vertical-align: middle;
+            font-size: 2.5rem;
+            background-color: white;
+            border: 2px solid #ccc;
+            cursor: pointer;
+        }
+
+        .emoji.dragging {
+            opacity: 0.5;
+        }
+    </style>
+</head>
+<body>
+    <div id="start-menu">
+        <h1>Emoji Crush</h1>
+        <button id="start-button">Start Game</button>
+    </div>
+    <div id="game-container" class="hidden">
+        <h1>Emoji Crush</h1>
+        <table id="game-table">
+            <tbody id="game"></tbody>
+        </table>
+    </div>
+    <audio id="background-music" loop>
+        <source src="background-music.mp3" type="audio/mp3">
+    </audio>
+    <script>
+        document.getElementById('start-button').addEventListener('click', startGame);
+
+        function startGame() {
+            document.getElementById('start-menu').classList.add('hidden');
+            document.getElementById('game-container').classList.remove('hidden');
+            document.getElementById('background-music').play();
+            createBoard();
+        }
+
+        const game = document.getElementById('game');
+        const emojis = ['😎', '🥶', '🤢', '🤡', '😈', '💀', '😡', '👽'];
+        const width = 8;
+        let emojiSquares = [];
+
+        // Initialize the board
+        function createBoard() {
+            for (let row = 0; row < width; row++) {
+                const tr = document.createElement('tr');
+                for (let col = 0; col < width; col++) {
+                    const td = document.createElement('td');
+                    td.setAttribute('draggable', true);
+                    td.setAttribute('id', row * width + col);
+                    td.classList.add('emoji');
+                    let randomEmoji = Math.floor(Math.random() * emojis.length);
+                    td.textContent = emojis[randomEmoji];
+                    tr.appendChild(td);
+                    emojiSquares.push(td);
+                }
+                game.appendChild(tr);
+            }
+            addDragEventListeners();
+        }
+
+        function addDragEventListeners() {
+            emojiSquares.forEach(emoji => emoji.addEventListener('dragstart', dragStart));
+            emojiSquares.forEach(emoji => emoji.addEventListener('dragend', dragEnd));
+            emojiSquares.forEach(emoji => emoji.addEventListener('dragover', dragOver));
+            emojiSquares.forEach(emoji => emoji.addEventListener('dragenter', dragEnter));
+            emojiSquares.forEach(emoji => emoji.addEventListener('dragleave', dragLeave));
+            emojiSquares.forEach(emoji => emoji.addEventListener('drop', dragDrop));
+        }
+
+        // Dragging functions
+        let emojiBeingDragged;
+        let emojiBeingReplaced;
+        let emojiIdBeingDragged;
+        let emojiIdBeingReplaced;
+
+        function dragStart() {
+            emojiBeingDragged = this.textContent;
+            emojiIdBeingDragged = parseInt(this.id);
+            this.classList.add('dragging');
+        }
+
+        function dragEnd() {
+            this.classList.remove('dragging');
+
+            // Valid moves
+            let validMoves = [
+                emojiIdBeingDragged - 1,
+                emojiIdBeingDragged - width,
+                emojiIdBeingDragged + 1,
+                emojiIdBeingDragged + width
+            ];
+
+            let validMove = validMoves.includes(emojiIdBeingReplaced);
+
+            if (emojiIdBeingReplaced && validMove) {
+                emojiIdBeingReplaced = null;
+                checkForMatches();
+            } else if (emojiIdBeingReplaced && !validMove) {
+                emojiSquares[emojiIdBeingReplaced].textContent = emojiBeingReplaced;
+                emojiSquares[emojiIdBeingDragged].textContent = emojiBeingDragged;
+            } else {
+                emojiSquares[emojiIdBeingDragged].textContent = emojiBeingDragged;
+            }
+        }
+
+        function dragOver(e) {
+            e.preventDefault();
+        }
+
+        function dragEnter(e) {
+            e.preventDefault();
+        }
+
+        function dragLeave() {}
+
+        function dragDrop() {
+            emojiBeingReplaced = this.textContent;
+            emojiIdBeingReplaced = parseInt(this.id);
+            emojiSquares[emojiIdBeingDragged].textContent = emojiBeingReplaced;
+            emojiSquares[emojiIdBeingReplaced].textContent = emojiBeingDragged;
+        }
+
+        // Check for matches
+        function checkForMatches() {
+            // Check for row of three
+            for (let i = 0; i < 61; i++) {
+                let rowOfThree = [i, i + 1, i + 2];
+                let decidedEmoji = emojiSquares[i].textContent;
+                const isBlank = emojiSquares[i].textContent === '';
+
+                if (rowOfThree.every(index => emojiSquares[index].textContent === decidedEmoji && !isBlank)) {
+                    rowOfThree.forEach(index => {
+                        emojiSquares[index].textContent = '';
+                    });
+                }
+            }
+
+            // Check for column of three
+            for (let i = 0; i < 47; i++) {
+                let columnOfThree = [i, i + width, i + width * 2];
+                let decidedEmoji = emojiSquares[i].textContent;
+                const isBlank = emojiSquares[i].textContent === '';
+
+                if (columnOfThree.every(index => emojiSquares[index].textContent === decidedEmoji && !isBlank)) {
+                    columnOfThree.forEach(index => {
+                        emojiSquares[index].textContent = '';
+                    });
+                }
+            }
+
+            moveDown();
+        }
+
+        // Move emojis down
+        function moveDown() {
+            for (let i = 0; i < 55; i++) {
+                if (emojiSquares[i + width].textContent === '') {
+                    emojiSquares[i + width].textContent = emojiSquares[i].textContent;
+                    emojiSquares[i].textContent = '';
+                }
+
+                const firstRow = [0, 1, 2, 3, 4, 5, 6, 7];
+                const isFirstRow = firstRow.includes(i);
+
+                if (isFirstRow && emojiSquares[i].textContent === '') {
+                    let randomEmoji = Math.floor(Math.random() * emojis.length);
+                    emojiSquares[i].textContent = emojis[randomEmoji];
+                }
+            }
+        }
+
+        window.setInterval(function () {
+            checkForMatches();
+        }, 100);
+    </script>
+</body>
+</html>
